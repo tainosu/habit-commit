@@ -1,32 +1,73 @@
-# React + TypeScript + Vite
+# habit-commit
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+GitHub のコントリビューショングラフ風の「草」で、日々の習慣を可視化する PWA アプリです。
+読書・筋トレなど習慣ごとに取り組んだ時間や回数を記録し、色の濃淡で積み重ねを確認できます。
 
-Currently, two official plugins are available:
+## 主な機能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- メールアドレス + パスワードでのアカウント登録・ログイン
+- 習慣の追加（単位は「分」または「回」、色を選択）
+- 日付ごとの記録（クイック入力ボタン付き）
+- 月間カレンダーの草グラフ表示（記録量に応じて色の濃淡が変化）
+- 習慣ごと / 全体のタブ切り替え
+- 連続記録日数（ストリーク）の表示
+- PWA 対応（スマホのホーム画面に追加してアプリとして利用可能）
 
-## React Compiler
+## 技術スタック
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| 分類 | 使用技術 |
+|---|---|
+| フロントエンド | React 19 / TypeScript / Vite |
+| スタイル | Tailwind CSS v4 |
+| バックエンド | Supabase（Auth / PostgreSQL / Row Level Security） |
+| ホスティング | Vercel |
 
-## Expanding the Oxlint configuration
+## ローカル開発
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+cp .env.example .env.local   # Supabase の URL とキーを記入
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+`.env.local` に設定する値は、Supabase ダッシュボードの「Connect」から確認できます。
+
+```
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<publishable key>
+```
+
+### データベースの準備
+
+Supabase ダッシュボードの SQL Editor で `supabase/schema.sql` を実行し、テーブルと RLS ポリシーを作成します。
+
+| テーブル | 内容 |
+|---|---|
+| `habits` | 習慣（名前・単位・色） |
+| `habit_logs` | 日ごとの記録（日付・値） |
+
+ユーザー情報は Supabase Auth（`auth.users`）が管理し、各テーブルは `user_id` で紐づきます。RLS により、ユーザーは自分のデータのみ読み書きできます。
+
+## デプロイ
+
+GitHub の `main` ブランチへ push すると Vercel が自動でデプロイします。
+
+- Vercel の Environment Variables に `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` を設定（All Environments）
+- 環境変数を変更した場合は Redeploy が必要（Vite はビルド時に値を埋め込むため）
+- Supabase の Authentication → URL Configuration の Site URL / Redirect URLs に公開 URL を登録
+
+## バージョン履歴
+
+バージョンは [セマンティック バージョニング](https://semver.org/lang/ja/) に従います（`package.json` の `version` と揃える）。
+
+- **MAJOR**：データ構造の変更など互換性のない変更
+- **MINOR**：機能追加
+- **PATCH**：バグ修正・細かな調整
+
+### v1.0.0 (2026-10-27)
+
+初回リリース。
+
+- 習慣の登録・記録、月間カレンダーの草グラフ、ストリーク表示
+- Supabase によるアカウント認証とクラウド保存（RLS で自分のデータのみアクセス可能）
+- Vercel にデプロイし、スマホから PWA として利用可能に

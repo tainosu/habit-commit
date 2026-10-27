@@ -1,0 +1,17 @@
+{
+  "name": "habit-commit",
+  "short_name": "habit-commit",
+  "description": "GitHub風の草グラフで習慣を可視化するアプリ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#22c55e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

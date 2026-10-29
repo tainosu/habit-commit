@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 export default function AuthScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -18,10 +19,15 @@ export default function AuthScreen() {
     const { error } =
       mode === 'signin'
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password })
+        : await supabase.auth.signUp({ email, password, options: { data: { invite_code: inviteCode } } })
 
     if (error) {
-      setError(error.message)
+      // 招待コード不一致は DB トリガーで弾かれ、汎用の DB エラーとして返る
+      setError(
+        mode === 'signup' && error.message === 'Database error saving new user'
+          ? '招待コードが正しくありません'
+          : error.message,
+      )
     } else if (mode === 'signup') {
       setMessage('確認メールを送信しました。メールのリンクをクリックしてください。')
     }
@@ -64,6 +70,20 @@ export default function AuthScreen() {
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-300 text-gray-800"
               />
             </div>
+            {mode === 'signup' && (
+              <div>
+                <label className="text-sm text-gray-600 mb-1 block">招待コード</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  required
+                  autoComplete="off"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-300 text-gray-800"
+                />
+              </div>
+            )}
 
             {error && <p className="text-red-500 text-sm">{error}</p>}
             {message && <p className="text-green-600 text-sm">{message}</p>}

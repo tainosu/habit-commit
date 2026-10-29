@@ -9,6 +9,7 @@ import TabBar from './components/TabBar'
 import LogSheet from './components/LogSheet'
 import AddHabitModal from './components/AddHabitModal'
 import AuthScreen from './components/AuthScreen'
+import { useStopwatch, formatElapsed } from './hooks/useStopwatch'
 import type { Habit, HabitLog } from './types'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null)
   const [logSheetDate, setLogSheetDate] = useState<string | null>(null)
   const [showAddHabit, setShowAddHabit] = useState(false)
+  const stopwatch = useStopwatch()
   const [viewMonth, setViewMonth] = useState<string>(today().slice(0, 7))
   const [habits, setHabits] = useState<Habit[] | undefined>(undefined)
   const [allLogs, setAllLogs] = useState<HabitLog[] | undefined>(undefined)
@@ -138,18 +140,18 @@ export default function App() {
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-lg">🌱</span>
-            <h1 className="text-base font-bold text-gray-800 tracking-tight">habit-commit</h1>
+            <h1 className="text-base font-bold text-gray-800 tracking-tight whitespace-nowrap">habit-commit</h1>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowAddHabit(true)}
-              className="text-sm font-semibold text-green-600 hover:text-green-700 px-3 py-1.5 rounded-xl hover:bg-green-50 transition-colors"
+              className="text-sm font-semibold text-green-600 hover:text-green-700 px-2 py-1.5 rounded-xl hover:bg-green-50 transition-colors whitespace-nowrap"
             >
               + 習慣を追加
             </button>
             <button
               onClick={() => supabase.auth.signOut()}
-              className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
+              className="text-xs text-gray-400 hover:text-gray-600 px-1.5 py-1.5 rounded-xl hover:bg-gray-50 transition-colors whitespace-nowrap"
               title="ログアウト"
             >
               ログアウト
@@ -237,7 +239,13 @@ export default function App() {
             className="pointer-events-auto w-full max-w-2xl mx-auto block py-4 rounded-2xl font-bold text-base text-white shadow-lg transition-transform active:scale-[0.98]"
             style={{ backgroundColor: grassColor }}
           >
-            今日を記録する
+            記録する
+            {/* タイマー計測中は経過時間を表示 */}
+            {stopwatch.elapsed > 0 && (
+              <span className="ml-2 inline-flex items-center gap-1 text-sm font-semibold tabular-nums bg-white/20 rounded-full px-2.5 py-0.5 align-middle">
+                ⏱ {formatElapsed(stopwatch.elapsed)}
+              </span>
+            )}
           </button>
         </div>
       )}
@@ -246,8 +254,10 @@ export default function App() {
       {logSheetDate && (
         <LogSheet
           date={logSheetDate}
-          habits={selectedHabitId != null ? habits.filter((h) => h.id === selectedHabitId) : habits}
+          habits={habits}
+          selectedHabitId={selectedHabitId}
           logs={allLogs ?? []}
+          stopwatch={stopwatch}
           onClose={() => setLogSheetDate(null)}
           onSaved={async () => {
             setLogSheetDate(null)

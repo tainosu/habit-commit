@@ -84,13 +84,14 @@ export default function MonthCalendar({ logs, color, maxValue, month, onDayClick
               const dayNum = parseInt(date.slice(8))
               const dow = di // 0=Sun in this layout
               return (
+                // 記録・編集できるのは当日のみ（過去日は閲覧のみ）
                 <button
                   key={date}
-                  onClick={() => !isFuture && onDayClick?.(date)}
-                  disabled={isFuture}
-                  className={`aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-transform active:scale-95 ${
-                    isFuture ? 'opacity-25 cursor-default' : 'cursor-pointer'
-                  }`}
+                  onClick={() => isToday && onDayClick?.(date)}
+                  disabled={!isToday}
+                  className={`aspect-square rounded-lg flex items-center justify-center text-sm font-medium ${
+                    isToday ? 'cursor-pointer transition-transform active:scale-95' : 'cursor-default'
+                  } ${isFuture ? 'opacity-25' : ''}`}
                   style={{
                     backgroundColor: isFuture ? '#f3f4f6' : colorForLevel(color, level),
                     color: level >= 3 ? 'white' : dow === 0 ? '#f87171' : dow === 6 ? '#60a5fa' : '#374151',

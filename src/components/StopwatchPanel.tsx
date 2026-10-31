@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createHabitLog } from '../db'
 import { today } from '../utils/dateUtils'
-import { formatElapsed, type Stopwatch } from '../hooks/useStopwatch'
+import { formatElapsed, MAX_ELAPSED, type Stopwatch } from '../hooks/useStopwatch'
 import type { Habit } from '../types'
 
 interface Props {
@@ -12,7 +12,8 @@ interface Props {
 }
 
 export default function StopwatchPanel({ stopwatch, habits, defaultHabitId, onSaved }: Props) {
-  const { elapsed, running, start, pause, reset } = stopwatch
+  const { elapsed, running, limitReached, start, pause, reset } = stopwatch
+  const maxHours = MAX_ELAPSED / 3600000
   // 時間で記録できるのは「分」単位の習慣のみ
   const minuteHabits = habits.filter((h) => h.unit === 'minutes')
   const [habitId, setHabitId] = useState<string | null>(
@@ -45,7 +46,13 @@ export default function StopwatchPanel({ stopwatch, habits, defaultHabitId, onSa
             {formatElapsed(elapsed)}
           </p>
           <p className="text-xs text-gray-400 mt-2 h-4">
-            {running ? '計測中… 画面を閉じても計測は続きます' : elapsed > 0 ? '一時停止中' : ''}
+            {running
+              ? `計測中… 閉じても計測は続きます（最大${maxHours}時間）`
+              : limitReached
+                ? `上限の${maxHours}時間に達したため停止しました`
+                : elapsed > 0
+                  ? '一時停止中'
+                  : ''}
           </p>
         </div>
 
@@ -60,10 +67,11 @@ export default function StopwatchPanel({ stopwatch, habits, defaultHabitId, onSa
           </button>
           <button
             onClick={running ? pause : start}
-            className="flex-[2] py-3.5 rounded-2xl text-white font-bold transition-transform active:scale-[0.98]"
+            disabled={limitReached}
+            className="flex-[2] py-3.5 rounded-2xl text-white font-bold transition-transform active:scale-[0.98] disabled:opacity-40"
             style={{ backgroundColor: running ? '#6b7280' : color }}
           >
-            {running ? '一時停止' : elapsed > 0 ? '再開' : 'スタート'}
+            {running ? '一時停止' : limitReached ? `上限（${maxHours}時間）` : elapsed > 0 ? '再開' : 'スタート'}
           </button>
         </div>
 

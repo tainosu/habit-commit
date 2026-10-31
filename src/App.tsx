@@ -9,6 +9,7 @@ import TabBar from './components/TabBar'
 import LogSheet from './components/LogSheet'
 import AddHabitModal from './components/AddHabitModal'
 import AuthScreen from './components/AuthScreen'
+import LoadingScreen from './components/LoadingScreen'
 import { useStopwatch, formatElapsed } from './hooks/useStopwatch'
 import type { Habit, HabitLog } from './types'
 
@@ -114,11 +115,7 @@ export default function App() {
 
   // 認証チェック中
   if (session === null) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <span className="text-gray-400">読み込み中...</span>
-      </div>
-    )
+    return <LoadingScreen />
   }
 
   // 未認証 → ログイン画面
@@ -126,11 +123,7 @@ export default function App() {
 
   // データ取得中
   if (habits === undefined) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <span className="text-gray-400">読み込み中...</span>
-      </div>
-    )
+    return <LoadingScreen />
   }
 
   return (

@@ -86,11 +86,9 @@ export function useStopwatch() {
 
 export type Stopwatch = ReturnType<typeof useStopwatch>
 
-/** ms -> "m:ss" / "h:mm:ss" */
+/** ms -> "hh:mm:ss"（時間単位で測れることが分かるよう、開始時から時間まで表示） */
 export function formatElapsed(ms: number): string {
   const total = Math.floor(ms / 1000)
-  const h = Math.floor(total / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = String(total % 60).padStart(2, '0')
-  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(Math.floor(total / 3600))}:${pad(Math.floor((total % 3600) / 60))}:${pad(total % 60)}`
 }

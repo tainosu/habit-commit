@@ -22,13 +22,17 @@ export default function StopwatchPanel({ stopwatch, habits, defaultHabitId, onSa
   const [saving, setSaving] = useState(false)
 
   const minutes = Math.round(elapsed / 60000)
+  // 日付を跨いで計測・記録しても、計測を開始した日の記録にする
+  const recordDate = stopwatch.startDate ?? today()
+  const [, rm, rd] = recordDate.split('-').map(Number)
+  const dayLabel = recordDate === today() ? '今日' : `${rm}月${rd}日`
   const habit = minuteHabits.find((h) => h.id === habitId)
   const color = habit?.color ?? '#22c55e'
 
   async function handleSave() {
     if (!habitId || minutes < 1) return
     setSaving(true)
-    await createHabitLog({ habitId, date: today(), value: minutes })
+    await createHabitLog({ habitId, date: recordDate, value: minutes })
     setSaving(false)
     reset()
     onSaved()
@@ -114,7 +118,7 @@ export default function StopwatchPanel({ stopwatch, habits, defaultHabitId, onSa
             : !habit
               ? '記録できる習慣がありません'
               : minutes >= 1
-                ? `今日の「${habit.name}」に ${minutes} 分を記録`
+                ? `${dayLabel}の「${habit.name}」に ${minutes} 分を記録`
                 : '1分以上計測すると記録できます'}
         </button>
       </div>

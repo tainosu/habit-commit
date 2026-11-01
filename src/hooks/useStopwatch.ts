@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toDateString } from '../utils/dateUtils'
 
 const STORAGE_KEY = 'habit-commit:stopwatch'
 /** 計測の上限（止め忘れ防止）。達したら自動で一時停止する */
@@ -7,14 +8,16 @@ export const MAX_ELAPSED = 3 * 60 * 60 * 1000
 interface StopwatchState {
   startedAt: number | null // 計測中なら開始時刻（ms）、停止中は null
   accumulated: number // 一時停止までに積み上げた時間（ms）
+  startDate: string | null // 計測を開始した日（YYYY-MM-DD）。日付を跨いでもこの日の記録にする
 }
 
-const INITIAL: StopwatchState = { startedAt: null, accumulated: 0 }
+const INITIAL: StopwatchState = { startedAt: null, accumulated: 0, startDate: null }
 
 function load(): StopwatchState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw) as StopwatchState
+    // 旧バージョンで保存した状態（startDate なし）も読めるよう初期値で補う
+    if (raw) return { ...INITIAL, ...(JSON.parse(raw) as Partial<StopwatchState>) }
   } catch {
     // 読めなければ初期状態から
   }
@@ -45,7 +48,7 @@ export function useStopwatch() {
     const id = setInterval(() => {
       const t = Date.now()
       if (accumulated + (t - startedAt) >= MAX_ELAPSED) {
-        setState({ startedAt: null, accumulated: MAX_ELAPSED })
+        setState((s) => ({ ...s, startedAt: null, accumulated: MAX_ELAPSED }))
       } else {
         setNow(t)
       }
@@ -64,7 +67,12 @@ export function useStopwatch() {
   function start() {
     const t = Date.now()
     setNow(t)
-    setState((s) => (s.startedAt != null || s.accumulated >= MAX_ELAPSED ? s : { ...s, startedAt: t }))
+    setState((s) =>
+      s.startedAt != null || s.accumulated >= MAX_ELAPSED
+        ? s
+        : // 最初のスタート時の日付を記録日にする（一時停止からの再開では変えない）
+          { ...s, startedAt: t, startDate: s.startDate ?? toDateString(new Date(t)) },
+    )
   }
 
   function pause() {
@@ -73,7 +81,7 @@ export function useStopwatch() {
     setState((s) =>
       s.startedAt == null
         ? s
-        : { startedAt: null, accumulated: Math.min(MAX_ELAPSED, s.accumulated + (t - s.startedAt)) },
+        : { ...s, startedAt: null, accumulated: Math.min(MAX_ELAPSED, s.accumulated + (t - s.startedAt)) },
     )
   }
 
@@ -81,7 +89,7 @@ export function useStopwatch() {
     setState(INITIAL)
   }
 
-  return { elapsed, running, limitReached, start, pause, reset }
+  return { elapsed, running, limitReached, startDate: state.startDate, start, pause, reset }
 }
 
 export type Stopwatch = ReturnType<typeof useStopwatch>

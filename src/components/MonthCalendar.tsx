@@ -81,16 +81,17 @@ export default function MonthCalendar({ logs, color, maxValue, month, onDayClick
               const isFuture = date > todayStr
               const isToday = date === todayStr
               const level = isFuture ? 0 : levelOf(date)
+              // 当日は記録・編集、記録のある過去日は閲覧のみ
+              const clickable = isToday || (!isFuture && (logMap[date] ?? 0) > 0)
               const dayNum = parseInt(date.slice(8))
               const dow = di // 0=Sun in this layout
               return (
-                // 記録・編集できるのは当日のみ（過去日は閲覧のみ）
                 <button
                   key={date}
-                  onClick={() => isToday && onDayClick?.(date)}
-                  disabled={!isToday}
+                  onClick={() => clickable && onDayClick?.(date)}
+                  disabled={!clickable}
                   className={`aspect-square rounded-lg flex items-center justify-center text-sm font-medium ${
-                    isToday ? 'cursor-pointer transition-transform active:scale-95' : 'cursor-default'
+                    clickable ? 'cursor-pointer transition-transform active:scale-95' : 'cursor-default'
                   } ${isFuture ? 'opacity-25' : ''}`}
                   style={{
                     backgroundColor: isFuture ? '#f3f4f6' : colorForLevel(color, level),

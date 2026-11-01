@@ -8,6 +8,7 @@ import MonthCalendar from './components/MonthCalendar'
 import TabBar from './components/TabBar'
 import LogSheet from './components/LogSheet'
 import AddHabitModal from './components/AddHabitModal'
+import DayHistorySheet from './components/DayHistorySheet'
 import AuthScreen from './components/AuthScreen'
 import LoadingScreen from './components/LoadingScreen'
 import { useStopwatch, formatElapsed } from './hooks/useStopwatch'
@@ -17,6 +18,7 @@ export default function App() {
   const [session, setSession] = useState<boolean | null>(null) // null=loading, false=unauth, true=authed
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null)
   const [logSheetDate, setLogSheetDate] = useState<string | null>(null)
+  const [historyDate, setHistoryDate] = useState<string | null>(null)
   const [showAddHabit, setShowAddHabit] = useState(false)
   const stopwatch = useStopwatch()
   const [viewMonth, setViewMonth] = useState<string>(today().slice(0, 7))
@@ -218,7 +220,7 @@ export default function App() {
               color={grassColor}
               maxValue={maxValue ?? 1}
               month={viewMonth}
-              onDayClick={(date) => setLogSheetDate(date)}
+              onDayClick={(date) => (date === today() ? setLogSheetDate(date) : setHistoryDate(date))}
             />
           )}
         </div>
@@ -256,6 +258,16 @@ export default function App() {
             setLogSheetDate(null)
             await loadData()
           }}
+        />
+      )}
+
+      {/* 過去日の記録（閲覧のみ） */}
+      {historyDate && (
+        <DayHistorySheet
+          date={historyDate}
+          habits={selectedHabitId != null ? habits.filter((h) => h.id === selectedHabitId) : habits}
+          logs={allLogs ?? []}
+          onClose={() => setHistoryDate(null)}
         />
       )}
 

@@ -5,6 +5,7 @@ create table habits (
   name text not null,
   unit text not null check (unit in ('minutes', 'count')),
   color text not null,
+  daily_goal numeric not null default 30 check (daily_goal > 0), -- 1日の目標（v1.6.0〜）
   created_at timestamptz default now()
 );
 

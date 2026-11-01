@@ -8,6 +8,7 @@ interface HabitRow {
   name: string
   unit: 'minutes' | 'count'
   color: string
+  daily_goal: number
   created_at: string
 }
 
@@ -24,6 +25,7 @@ const toHabit = (r: HabitRow): Habit => ({
   name: r.name,
   unit: r.unit,
   color: r.color,
+  dailyGoal: Number(r.daily_goal),
   createdAt: r.created_at,
 })
 
@@ -41,15 +43,20 @@ export async function fetchHabits(): Promise<Habit[]> {
 }
 
 export async function createHabit(
-  data: Pick<Habit, 'name' | 'unit' | 'color'>,
+  data: Pick<Habit, 'name' | 'unit' | 'color' | 'dailyGoal'>,
 ): Promise<Habit> {
   const { data: row, error } = await supabase
     .from('habits')
-    .insert(data)
+    .insert({ name: data.name, unit: data.unit, color: data.color, daily_goal: data.dailyGoal })
     .select()
     .single()
   if (error) throw error
   return toHabit(row as HabitRow)
+}
+
+export async function updateHabitGoal(id: string, dailyGoal: number): Promise<void> {
+  const { error } = await supabase.from('habits').update({ daily_goal: dailyGoal }).eq('id', id)
+  if (error) throw error
 }
 
 export async function removeHabit(id: string): Promise<void> {

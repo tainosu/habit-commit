@@ -1,14 +1,16 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabase'
-import { fetchHabits, fetchHabitLogs, createHabit, removeHabit } from './db'
+import { fetchHabits, fetchHabitLogs, createHabit, removeHabit, updateHabitGoal } from './db'
 import { today } from './utils/dateUtils'
 import { calcStreak } from './utils/streakUtils'
+import { goalLevel, overallLevel } from './utils/levelUtils'
 import HabitGrass from './components/HabitGrass'
 import MonthCalendar from './components/MonthCalendar'
 import TabBar from './components/TabBar'
 import LogSheet from './components/LogSheet'
 import AddHabitModal from './components/AddHabitModal'
 import DayHistorySheet from './components/DayHistorySheet'
+import EditGoalModal from './components/EditGoalModal'
 import AuthScreen from './components/AuthScreen'
 import LoadingScreen from './components/LoadingScreen'
 import { useStopwatch, formatElapsed } from './hooks/useStopwatch'
@@ -20,6 +22,7 @@ export default function App() {
   const [logSheetDate, setLogSheetDate] = useState<string | null>(null)
   const [historyDate, setHistoryDate] = useState<string | null>(null)
   const [showAddHabit, setShowAddHabit] = useState(false)
+  const [showEditGoal, setShowEditGoal] = useState(false)
   const stopwatch = useStopwatch()
   const [viewMonth, setViewMonth] = useState<string>(today().slice(0, 7))
   const [habits, setHabits] = useState<Habit[] | undefined>(undefined)
@@ -47,45 +50,47 @@ export default function App() {
     if (session) loadData()
   }, [session, loadData])
 
-  // 表示用ログ: 全体 or 特定習慣
-  const { effectiveLogs, grassColor, maxValue } = useMemo(() => {
-    const logs = allLogs ?? []
+  // 草の濃さ（日付 -> 0〜4）: 全体 or 特定習慣
+  const { levelMap, grassColor } = useMemo(() => {
     const habs = habits ?? []
 
-    if (selectedHabitId != null) {
-      const habit = habs.find((h) => h.id === selectedHabitId)
-      return {
-        effectiveLogs: logs.filter((l) => l.habitId === selectedHabitId),
-        grassColor: habit?.color ?? '#22c55e',
-        maxValue: undefined,
-      }
+    // 日付 -> 習慣ID -> その日の合計
+    const totals: Record<string, Record<string, number>> = {}
+    for (const log of allLogs ?? []) {
+      const byHabit = (totals[log.date] ??= {})
+      byHabit[log.habitId] = (byHabit[log.habitId] ?? 0) + log.value
     }
 
-    // 全体: 日付ごとに「何習慣こなしたか」を集計
-    const dateHabitSets: Record<string, Set<string>> = {}
-    for (const log of logs) {
-      if (!dateHabitSets[log.date]) dateHabitSets[log.date] = new Set()
-      dateHabitSets[log.date].add(log.habitId)
+    const levelMap: Record<string, number> = {}
+
+    if (selectedHabitId != null) {
+      // 特定習慣: その日の目標に対する達成率
+      const habit = habs.find((h) => h.id === selectedHabitId)
+      if (habit) {
+        for (const [date, byHabit] of Object.entries(totals)) {
+          const level = goalLevel(byHabit[habit.id] ?? 0, habit.dailyGoal)
+          if (level > 0) levelMap[date] = level
+        }
+      }
+      return { levelMap, grassColor: habit?.color ?? '#22c55e' }
     }
-    const syntheticLogs: HabitLog[] = Object.entries(dateHabitSets).map(([date, s]) => ({
-      id: '',
-      habitId: '',
-      date,
-      value: s.size,
-    }))
-    return {
-      effectiveLogs: syntheticLogs,
-      grassColor: '#22c55e',
-      maxValue: Math.max(habs.length, 1),
+
+    // 全体: 目標を達成した習慣の数 ÷ 習慣の数
+    for (const [date, byHabit] of Object.entries(totals)) {
+      const achieved = habs.filter((h) => (byHabit[h.id] ?? 0) >= h.dailyGoal).length
+      levelMap[date] = overallLevel(achieved, habs.length)
     }
+    return { levelMap, grassColor: '#22c55e' }
   }, [allLogs, habits, selectedHabitId])
+
+  const selectedHabit = habits?.find((h) => h.id === selectedHabitId)
 
   const streak = useMemo(
     () => calcStreak(allLogs ?? [], selectedHabitId ?? undefined),
     [allLogs, selectedHabitId],
   )
 
-  async function handleAddHabit(data: Pick<Habit, 'name' | 'unit' | 'color'>) {
+  async function handleAddHabit(data: Pick<Habit, 'name' | 'unit' | 'color' | 'dailyGoal'>) {
     await createHabit(data)
     await loadData()
   }
@@ -173,21 +178,29 @@ export default function App() {
           ) : (
             <span className="text-sm text-gray-400">まだ記録がありません。今日から始めよう！</span>
           )}
-          {/* 個別習慣タブで削除ボタン */}
-          {selectedHabitId != null && (
-            <button
-              onClick={() => deleteHabit(selectedHabitId)}
-              className="ml-auto text-xs text-gray-300 hover:text-red-400 transition-colors"
-            >
-              習慣を削除
-            </button>
+          {/* 個別習慣タブで目標の編集・削除ボタン */}
+          {selectedHabit != null && (
+            <div className="ml-auto flex items-center gap-3 flex-shrink-0">
+              <button
+                onClick={() => setShowEditGoal(true)}
+                className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-2 py-1 transition-colors whitespace-nowrap"
+              >
+                目標 {selectedHabit.dailyGoal}{selectedHabit.unit === 'minutes' ? '分' : '回'} ✎
+              </button>
+              <button
+                onClick={() => deleteHabit(selectedHabit.id)}
+                className="text-xs text-gray-300 hover:text-red-400 transition-colors whitespace-nowrap"
+              >
+                削除
+              </button>
+            </div>
           )}
         </div>
 
         {/* 草グラフ（過去半年） */}
         <div className="bg-white mx-4 rounded-2xl shadow-sm border border-gray-100 px-4 py-4 mb-4">
           <p className="text-xs text-gray-400 mb-3">過去26週</p>
-          <HabitGrass logs={effectiveLogs} color={grassColor} maxValue={maxValue} />
+          <HabitGrass levelMap={levelMap} color={grassColor} />
         </div>
 
         {/* 月カレンダー */}
@@ -216,9 +229,8 @@ export default function App() {
             </div>
           ) : (
             <MonthCalendar
-              logs={effectiveLogs}
+              levelMap={levelMap}
               color={grassColor}
-              maxValue={maxValue ?? 1}
               month={viewMonth}
               onDayClick={(date) => (date === today() ? setLogSheetDate(date) : setHistoryDate(date))}
             />
@@ -268,6 +280,18 @@ export default function App() {
           habits={selectedHabitId != null ? habits.filter((h) => h.id === selectedHabitId) : habits}
           logs={allLogs ?? []}
           onClose={() => setHistoryDate(null)}
+        />
+      )}
+
+      {/* 目標編集モーダル */}
+      {showEditGoal && selectedHabit != null && (
+        <EditGoalModal
+          habit={selectedHabit}
+          onSave={async (goal) => {
+            await updateHabitGoal(selectedHabit.id, goal)
+            await loadData()
+          }}
+          onClose={() => setShowEditGoal(false)}
         />
       )}
 

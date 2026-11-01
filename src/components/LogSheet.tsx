@@ -220,11 +220,9 @@ function ManualPanel({ date, habits, logs, onClose, onSaved }: ManualPanelProps)
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: habit.color }} />
                   <span className="font-semibold text-gray-800">{habit.name}</span>
-                  {total > 0 && (
-                    <span className="text-xs text-gray-400 ml-auto">
-                      記録済: {total} {unit}
-                    </span>
-                  )}
+                  <span className="text-xs text-gray-400 ml-auto">
+                    {total > 0 ? `記録済: ${total} / 目標 ${habit.dailyGoal} ${unit}` : `目標 ${habit.dailyGoal} ${unit}`}
+                  </span>
                 </div>
                 {/* クイック追加 */}
                 <div className="flex gap-2 items-center">

@@ -3,6 +3,7 @@ export interface Habit {
   name: string
   unit: 'minutes' | 'count'
   color: string
+  dailyGoal: number // 1日の目標（unit の単位）
   createdAt: string
 }
 

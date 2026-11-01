@@ -1,36 +1,15 @@
-import { useMemo } from 'react'
 import { toDateString } from '../utils/dateUtils'
-import type { HabitLog } from '../types'
+import { colorForLevel } from '../utils/levelUtils'
 
 interface Props {
-  logs: HabitLog[]
+  levelMap: Record<string, number> // 日付 -> 濃さ（0〜4）
   color: string
-  maxValue: number
   month: string // YYYY-MM
   onDayClick?: (date: string) => void
 }
 
-function hexToRgb(hex: string) {
-  const n = parseInt(hex.replace('#', ''), 16)
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 }
-}
-
-function colorForLevel(baseColor: string, level: number): string {
-  if (level === 0) return '#ebedf0'
-  const { r, g, b } = hexToRgb(baseColor)
-  const alpha = 0.2 + (level / 4) * 0.8
-  const bg = 235
-  return `rgb(${Math.round(bg + (r - bg) * alpha)}, ${Math.round(bg + (g - bg) * alpha)}, ${Math.round(bg + (b - bg) * alpha)})`
-}
-
-export default function MonthCalendar({ logs, color, maxValue, month, onDayClick }: Props) {
+export default function MonthCalendar({ levelMap, color, month, onDayClick }: Props) {
   const todayStr = toDateString(new Date())
-
-  const logMap = useMemo(() => {
-    const m: Record<string, number> = {}
-    for (const log of logs) m[log.date] = (m[log.date] ?? 0) + log.value
-    return m
-  }, [logs])
 
   // 月の全日付を生成
   const [year, monthNum] = month.split('-').map(Number)
@@ -48,12 +27,6 @@ export default function MonthCalendar({ logs, color, maxValue, month, onDayClick
 
   const weeks: Array<Array<string | null>> = []
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
-
-  function levelOf(date: string): number {
-    const val = logMap[date] ?? 0
-    if (val === 0) return 0
-    return Math.min(4, Math.ceil((val / maxValue) * 4))
-  }
 
   const dayNames = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -80,9 +53,9 @@ export default function MonthCalendar({ logs, color, maxValue, month, onDayClick
               if (!date) return <div key={di} />
               const isFuture = date > todayStr
               const isToday = date === todayStr
-              const level = isFuture ? 0 : levelOf(date)
-              // 当日は記録・編集、記録のある過去日は閲覧のみ
-              const clickable = isToday || (!isFuture && (logMap[date] ?? 0) > 0)
+              const level = isFuture ? 0 : (levelMap[date] ?? 0)
+              // 当日は記録・編集、記録のある過去日は閲覧のみ（記録があれば level >= 1）
+              const clickable = isToday || level > 0
               const dayNum = parseInt(date.slice(8))
               const dow = di // 0=Sun in this layout
               return (
@@ -99,7 +72,7 @@ export default function MonthCalendar({ logs, color, maxValue, month, onDayClick
                     outline: isToday ? `2px solid ${color}` : undefined,
                     outlineOffset: isToday ? '2px' : undefined,
                   }}
-                  title={`${date}: ${logMap[date] ?? 0}`}
+                  title={date}
                 >
                   {dayNum}
                 </button>

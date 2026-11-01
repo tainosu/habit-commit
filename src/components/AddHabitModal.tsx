@@ -12,8 +12,11 @@ const PRESET_COLORS = [
   '#f97316', // orange
 ]
 
+// 単位ごとの目標の初期値
+const DEFAULT_GOAL = { minutes: 30, count: 10 }
+
 interface Props {
-  onAdd: (habit: Pick<Habit, 'name' | 'unit' | 'color'>) => Promise<void>
+  onAdd: (habit: Pick<Habit, 'name' | 'unit' | 'color' | 'dailyGoal'>) => Promise<void>
   onClose: () => void
 }
 
@@ -21,13 +24,16 @@ export default function AddHabitModal({ onAdd, onClose }: Props) {
   const [name, setName] = useState('')
   const [unit, setUnit] = useState<'minutes' | 'count'>('minutes')
   const [color, setColor] = useState(PRESET_COLORS[0])
+  const [goal, setGoal] = useState(String(DEFAULT_GOAL.minutes))
   const [loading, setLoading] = useState(false)
+  const goalValue = parseFloat(goal)
+  const goalValid = !isNaN(goalValue) && goalValue > 0
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
+    if (!name.trim() || !goalValid) return
     setLoading(true)
-    await onAdd({ name: name.trim(), unit, color })
+    await onAdd({ name: name.trim(), unit, color, dailyGoal: goalValue })
     setLoading(false)
     onClose()
   }
@@ -61,7 +67,10 @@ export default function AddHabitModal({ onAdd, onClose }: Props) {
                 <button
                   key={u}
                   type="button"
-                  onClick={() => setUnit(u)}
+                  onClick={() => {
+                    setUnit(u)
+                    setGoal(String(DEFAULT_GOAL[u]))
+                  }}
                   className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
                     unit === u
                       ? 'bg-green-500 text-white border-green-500'
@@ -72,6 +81,23 @@ export default function AddHabitModal({ onAdd, onClose }: Props) {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* 1日の目標 */}
+          <div>
+            <label className="text-sm text-gray-600 mb-1 block">1日の目標</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                value={goal}
+                onChange={(e) => setGoal(e.target.value)}
+                className="flex-1 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300 text-right"
+              />
+              <span className="text-sm text-gray-600">{unit === 'minutes' ? '分' : '回'} / 日</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">目標に対する達成率で草の濃さが決まります</p>
           </div>
 
           {/* 色 */}
@@ -105,7 +131,7 @@ export default function AddHabitModal({ onAdd, onClose }: Props) {
             </button>
             <button
               type="submit"
-              disabled={!name.trim() || loading}
+              disabled={!name.trim() || !goalValid || loading}
               className="flex-1 py-2 rounded-xl bg-green-500 text-white font-semibold hover:bg-green-600 disabled:opacity-40 transition-colors"
             >
               {loading ? '追加中...' : '追加'}
